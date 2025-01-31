@@ -1,43 +1,104 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react';
+import TaskModal from './TaskModal';
 
 function TodoList() {
-    return (
-        <>
-            <div className="bg-gray-100 flex items-center justify-center min-h-screen">
-                <div className="bg-white shadow-md rounded-lg p-6 w-full max-w-md">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold">Lista de Tareas</h2>
-                        <select className="bg-blue-500 text-white px-4 py-2 rounded-md">
-                            <option>Todas las tareas</option>
-                            <option>Tareas por terminar</option>
-                            <option>Tareas pendientes</option>
-                        </select>
-                    </div>
-                    <ul className="space-y-4">
-                        <li className="p-4 bg-gray-50 rounded-md">
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="font-bold">Tarea 1</span>
-                                <button className="bg-lime-600 text-white px-2 py-1 rounded-md">Completar</button>
-                                
-                            </div>
-                            <p className="text-gray-700">Descripción de la tarea 1.</p>
-                        </li>
-                        <li className="p-4 bg-green-500 rounded-md">
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="font-bold">Tarea 2</span>
-                                
-                            </div>
-                            <p className="text-gray-700">Descripción de la tarea 2.</p>
-                        </li>
-                    </ul>
-                    <div class="mt-4">
-            <button class="bg-blue-500 text-white px-4 py-2 rounded w-full">Agregar Tarea</button>
-        </div>
-                </div>
-            </div>
+    const [tasks, setTasks] = useState([]);
+    const [filter, setFilter] = useState('all');
+    const [modalOpen, setModalOpen] = useState(false);
+    const [taskInput, setTaskInput] = useState({ name: '', description: '', status: 'pending' });
 
-        </>
-    )
+    useEffect(() => {
+        const storedTasks = JSON.parse(localStorage.getItem('tasks')) || [];
+        setTasks(storedTasks);
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+    }, [tasks]);
+
+    const addTask = () => {
+        if (!taskInput.name.trim()) return;
+        setTasks([...tasks, { ...taskInput, id: Date.now() }]);
+        setModalOpen(false);
+        setTaskInput({ name: '', description: '', status: 'pending' });
+    };
+
+    const toggleTaskStatus = (id) => {
+        setTasks(tasks.map(task =>
+            task.id === id ? { ...task, status: task.status === 'pending' ? 'completed' : 'pending' } : task
+        ));
+    };
+
+    const deleteTask = (id) => {
+        setTasks(tasks.filter(task => task.id !== id));
+    };
+
+    const filteredTasks = tasks.filter(task =>
+        filter === 'all'
+            ? true
+            : filter === 'pending'
+                ? task.status === 'pending'
+                : task.status === 'completed'
+    );
+
+    return (
+        <div className="bg-gray-100 flex items-center justify-center min-h-screen">
+            <div className="bg-white shadow-md rounded-lg p-6 w-full max-w-md">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-2xl font-bold">Lista de Tareas</h2>
+                    <select
+                        className="bg-blue-500 text-white px-4 py-2 rounded-md"
+                        onChange={(e) => setFilter(e.target.value)}
+                    >
+                        <option value="all">Todas las tareas</option>
+                        <option value="pending">Tareas Pendientes</option>
+                        <option value="completed">Tareas Finalizadas</option>
+                    </select>
+                </div>
+                <ul className="space-y-4">
+                    {filteredTasks.map(task => (
+                        <li
+                            key={task.id}
+                            className={`p-4 rounded-md ${task.status === 'completed' ? 'bg-green-500' : 'bg-gray-50'
+                                }`}
+                        >
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="font-bold">{task.name}</span>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => toggleTaskStatus(task.id)}
+                                        className="bg-lime-600 text-white px-2 py-1 rounded-md"
+                                    >
+                                        {task.status === 'pending' ? 'Completar' : 'Pendiente'}
+                                    </button>
+                                    <button
+                                        onClick={() => deleteTask(task.id)}
+                                        className="bg-red-600 text-white px-2 py-1 rounded-md"
+                                    >
+                                        Eliminar
+                                    </button>
+                                </div>
+                            </div>
+                            <p className="text-gray-700">{task.description}</p>
+                        </li>
+                    ))}
+                </ul>
+                <button
+                    onClick={() => setModalOpen(true)}
+                    className="bg-blue-500 text-white px-4 py-2 rounded w-full mt-4"
+                >
+                    Agregar Tarea
+                </button>
+            </div>
+            <TaskModal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                onSave={addTask}
+                taskInput={taskInput}
+                setTaskInput={setTaskInput}
+            />
+        </div>
+    );
 }
 
-export default TodoList
+export default TodoList;
