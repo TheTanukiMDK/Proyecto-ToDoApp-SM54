@@ -2,35 +2,41 @@ import React, { useState, useEffect } from 'react';
 import TaskModal from './TaskModal';
 
 function TodoList() {
-    const [tasks, setTasks] = useState([]);
+    const [tasks, setTasks] = useState(() => {
+        const storedTasks = localStorage.getItem('tasks');
+        return storedTasks ? JSON.parse(storedTasks) : [];
+    });
+
     const [filter, setFilter] = useState('all');
     const [modalOpen, setModalOpen] = useState(false);
     const [taskInput, setTaskInput] = useState({ name: '', description: '', status: 'pending' });
-
-    useEffect(() => {
-        const storedTasks = JSON.parse(localStorage.getItem('tasks')) || [];
-        setTasks(storedTasks);
-    }, []);
+    const [error, setError] = useState('')
 
     useEffect(() => {
         localStorage.setItem('tasks', JSON.stringify(tasks));
     }, [tasks]);
 
     const addTask = () => {
-        if (!taskInput.name.trim()) return;
-        setTasks([...tasks, { ...taskInput, id: Date.now() }]);
+        if (!taskInput.name.trim() || !taskInput.description.trim()) {
+            setError('Los campos "Nombre" y "Descripción" son obligatorios.');
+            return;
+        }
+        const newTasks = [...tasks, { ...taskInput, id: Date.now() }];
+        setTasks(newTasks);
         setModalOpen(false);
         setTaskInput({ name: '', description: '', status: 'pending' });
     };
 
     const toggleTaskStatus = (id) => {
-        setTasks(tasks.map(task =>
+        const updatedTasks = tasks.map(task =>
             task.id === id ? { ...task, status: task.status === 'pending' ? 'completed' : 'pending' } : task
-        ));
+        );
+        setTasks(updatedTasks);
     };
 
     const deleteTask = (id) => {
-        setTasks(tasks.filter(task => task.id !== id));
+        const filteredTasks = tasks.filter(task => task.id !== id);
+        setTasks(filteredTasks);
     };
 
     const filteredTasks = tasks.filter(task =>
@@ -49,6 +55,7 @@ function TodoList() {
                     <select
                         className="bg-blue-500 text-white px-4 py-2 rounded-md"
                         onChange={(e) => setFilter(e.target.value)}
+                        value={filter}
                     >
                         <option value="all">Todas las tareas</option>
                         <option value="pending">Tareas Pendientes</option>
@@ -83,6 +90,7 @@ function TodoList() {
                         </li>
                     ))}
                 </ul>
+
                 <button
                     onClick={() => setModalOpen(true)}
                     className="bg-blue-500 text-white px-4 py-2 rounded w-full mt-4"
@@ -92,10 +100,14 @@ function TodoList() {
             </div>
             <TaskModal
                 isOpen={modalOpen}
-                onClose={() => setModalOpen(false)}
+                onClose={() => {
+                    setModalOpen(false);
+                    setError('');
+                }}
                 onSave={addTask}
                 taskInput={taskInput}
                 setTaskInput={setTaskInput}
+                error={error}  // Pasamos el error al modal
             />
         </div>
     );
